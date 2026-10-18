@@ -1,0 +1,11 @@
+# HAX.BABY HACKATHON RULES FOR AI AGENT
+1. Aesthetic & Palette: Strict Early-Web Cozy Toybox aesthetic. Use Warm Cream (#fff8f1), Soft Cream Card (#f5eadc), Rich Berry (#a34063), Cocoa Brown (#5c4033) for borders/text, Midnight Purple (#161124) for dark mode, and Warm Amber (#ffb703) for glows.
+2. Typography: Load Google Fonts 'Fraunces' (serif headers) and 'Fredoka' (bubbly body/UI).
+3. Official Assets (Use these exact URLs):
+   - Hero Cloud: https://hax.baby/baby/assets/pip_avatar_cloud.png
+   - Lullaby Music Box: https://hax.baby/baby/assets/pip_lullaby_box.png
+   - Dream Nightlight Lantern: https://hax.baby/baby/assets/pip_dream_lantern.png
+   - Character Portrait: https://hax.baby/baby/assets/pip_portrait.png
+4. Strict Story Rule: Every story scene MUST be under 120 words (max limit is 150 words). Never write walls of text.
+5. Audio Rule: Synthesize all sounds using the native browser Web Audio API (no external MP3 files that could 404). A visible Mute Toggle in the top navbar is strictly mandatory.
+6. Zero Console Errors: Ensure all React lists have unique keys, all images have alt tags, and all event listeners clean up properly.
