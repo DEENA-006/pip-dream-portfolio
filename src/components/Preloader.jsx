@@ -239,24 +239,19 @@ export default function Preloader({
     };
   }, [phase]);
 
-  const handleEnter = () => {
-    if (phase === 'exit') return;
-    chimedRef.current = true;
-    playMusicBoxChime(isMuted);
-    setPhase('exit');
-  };
-
-  // Climax when 100% is reached
+  // Climax when 100% is reached: auto-play music-box chime, wave Pip, then auto-exit!
   useEffect(() => {
     if (phase !== 'complete') return;
 
-    // Try playing chime if context is already active
-    playMusicBoxChime(isMuted);
+    if (!chimedRef.current) {
+      chimedRef.current = true;
+      playMusicBoxChime(isMuted);
+    }
 
-    // Auto-advance after 2.4s if user doesn't click
+    // Auto-advance after 750ms so user sees Pip wave & sparkles, then blanket pulls up
     const t = setTimeout(() => {
-      setPhase((p) => (p === 'complete' ? 'exit' : p));
-    }, 2400);
+      setPhase('exit');
+    }, 750);
 
     return () => clearTimeout(t);
   }, [phase, isMuted]);
@@ -358,14 +353,8 @@ export default function Preloader({
         aria-live="polite"
         aria-busy={phase !== 'exit'}
         aria-label="Loading Pip's Dream Nursery"
-        onClick={() => {
-          if (phase === 'complete') handleEnter();
-          else unlockAudio();
-        }}
-        onPointerDown={() => {
-          if (phase === 'complete') handleEnter();
-          else unlockAudio();
-        }}
+        onClick={unlockAudio}
+        onPointerDown={unlockAudio}
         style={{
           position: 'fixed',
           inset: 0,
@@ -695,57 +684,10 @@ export default function Preloader({
             </span>
           </div>
 
-          {/* 5. Audio hint / Enter button & Footer Microcopy */}
-          {phase === 'complete' ? (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleEnter();
-              }}
-              style={{
-                marginTop: '4px',
-                padding: '8px 22px',
-                borderRadius: '999px',
-                backgroundColor: '#a34063',
-                color: '#fff8f1',
-                border: '2px solid rgba(255, 248, 241, 0.95)',
-                boxShadow: '0 4px 18px rgba(163, 64, 99, 0.45)',
-                fontFamily: 'var(--font-head, "Fraunces", Georgia, serif)',
-                fontWeight: 800,
-                fontSize: '0.88rem',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                transform: 'scale(1.02)',
-              }}
-            >
-              <span>✨</span> Enter Nursery with Sound <span>🎵</span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={unlockAudio}
-              style={{
-                background: 'none',
-                border: 'none',
-                margin: '2px 0 0 0',
-                padding: '2px 8px',
-                fontFamily: 'var(--font-body, "Fredoka", sans-serif)',
-                fontSize: '0.68rem',
-                color: '#a34063',
-                opacity: 0.82,
-                cursor: 'pointer',
-              }}
-            >
-              🎵 Click anywhere to wake Pip with sound
-            </button>
-          )}
-
+          {/* Footer microcopy */}
           <p
             style={{
-              margin: '4px 0 0 0',
+              margin: '8px 0 0 0',
               fontFamily: 'var(--font-body, "Fredoka", sans-serif)',
               fontSize: '0.72rem',
               fontWeight: 600,

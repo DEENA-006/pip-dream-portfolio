@@ -1,8 +1,69 @@
 // Web Audio synth for Pip.baby
-// Lightweight, zero-asset music box synthesizer.
+// Lightweight, zero-asset music box synthesizer with auto-playable PCM fallback.
 
 let _ctx = null;
 let _masterGain = null;
+let _cachedChimeUri = null;
+
+// generate a clean 16-bit mono PCM WAV data URI
+function generateWav(sampleRate, duration, sampleFn) {
+  if (typeof window === 'undefined') return '';
+  try {
+    const numSamples = Math.floor(sampleRate * duration);
+    const buffer = new Int16Array(numSamples);
+    for (let i = 0; i < numSamples; i++) {
+      const t = i / sampleRate;
+      const s = Math.max(-1, Math.min(1, sampleFn(t)));
+      buffer[i] = s * 32767;
+    }
+    const wavBytes = new Uint8Array(44 + buffer.byteLength);
+    const view = new DataView(wavBytes.buffer);
+    const writeStr = (off, str) => {
+      for (let j = 0; j < str.length; j++) view.setUint8(off + j, str.charCodeAt(j));
+    };
+    writeStr(0, 'RIFF');
+    view.setUint32(4, 36 + buffer.byteLength, true);
+    writeStr(8, 'WAVE');
+    writeStr(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true); // PCM
+    view.setUint16(22, 1, true); // Mono
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    writeStr(36, 'data');
+    view.setUint32(40, buffer.byteLength, true);
+    new Uint8Array(wavBytes.buffer, 44).set(new Uint8Array(buffer.buffer));
+    let binary = '';
+    for (let j = 0; j < wavBytes.length; j++) binary += String.fromCharCode(wavBytes[j]);
+    return 'data:audio/wav;base64,' + btoa(binary);
+  } catch {
+    return '';
+  }
+}
+
+// get or lazily synthesize the 4-note music-box chime WAV (C5 -> E5 -> G5 -> C6)
+function getChimeWav() {
+  if (_cachedChimeUri) return _cachedChimeUri;
+  _cachedChimeUri = generateWav(16000, 1.4, (t) => {
+    const notes = [
+      { f: 523.25, t: 0.0 },
+      { f: 659.25, t: 0.12 },
+      { f: 783.99, t: 0.24 },
+      { f: 1046.50, t: 0.36 },
+    ];
+    let s = 0;
+    for (const n of notes) {
+      if (t >= n.t) {
+        const dt = t - n.t;
+        s += Math.sin(2 * Math.PI * n.f * dt) * Math.exp(-dt * 3.8) * 0.45;
+      }
+    }
+    return s;
+  });
+  return _cachedChimeUri;
+}
 
 // lazy init on user action
 export function getCtx() {
@@ -110,8 +171,21 @@ export function playBoopSound(boopCount = 0, isMuted = false) {
 }
 
 // music box chime for preloader exit (C5 -> E5 -> G5 -> C6)
+// plays automatically via HTML5 audio element + Web Audio synth
 export function playMusicBoxChime(isMuted = false) {
   if (isMuted) return;
+
+  // 1. HTML5 Audio (bypasses Web Audio autoplay lock on reload)
+  try {
+    const uri = getChimeWav();
+    if (uri) {
+      const audio = new Audio(uri);
+      audio.volume = 0.65;
+      audio.play().catch(() => {});
+    }
+  } catch {}
+
+  // 2. Web Audio synthesis companion
   const ctx = getCtx();
   if (!ctx) return;
 
