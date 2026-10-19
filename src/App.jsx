@@ -9,7 +9,7 @@ import Footer from './components/Footer.jsx';
 import AchievementModal from './components/AchievementModal.jsx';
 import SparkleTrail from './components/SparkleTrail.jsx';
 import Preloader from './components/Preloader.jsx';
-import { playVictoryArpeggio } from './utils/sound.js';
+import { playVictoryArpeggio, unlockAudio } from './utils/sound.js';
 
 const CHAOS_STICKERS = [
   { char: '🎀', top: '12%', left: '4%', delay: '0s' },
@@ -33,6 +33,19 @@ export default function App() {
 
   const skullRef = useRef(null);
   const modalTimerRef = useRef(null);
+
+  // global gesture listener to unlock Web Audio on first user interaction
+  useEffect(() => {
+    const handleGesture = () => unlockAudio();
+    window.addEventListener('pointerdown', handleGesture, { once: true });
+    window.addEventListener('keydown', handleGesture, { once: true });
+    window.addEventListener('touchstart', handleGesture, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', handleGesture);
+      window.removeEventListener('keydown', handleGesture);
+      window.removeEventListener('touchstart', handleGesture);
+    };
+  }, []);
 
   // dev easter egg for curious inspectors
   useEffect(() => {

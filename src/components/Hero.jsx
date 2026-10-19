@@ -50,17 +50,6 @@ export default function Hero({ isMuted, _isDark, dreamsDelivered, boopCount, sec
   return (
     <section id="hero" className="grid md:grid-cols-12 gap-8 lg:gap-12 items-center pt-4">
       <div className="md:col-span-7 space-y-6">
-        <div className="flex flex-wrap items-center gap-3">
-          {secretUnlocked && (
-            <span
-              data-testid="secret-rattle-badge"
-              className="retro-tag !bg-[#ffb703]/20 !text-amber-700 dark:!text-[#ffb703] !border-[#ffb703]/40"
-            >
-              🏆 Starlight Rattle Master!
-            </span>
-          )}
-        </div>
-
         <h1 className="text-editorial text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.05] tracking-tight text-[#5c4033] dark:text-[#fff8f1]">
           "I build the dreams you{' '}
           <span className="text-[#a34063] dark:text-[#ffb703] dashed-underline">

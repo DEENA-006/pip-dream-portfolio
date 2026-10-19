@@ -24,6 +24,7 @@
  */
 
 import { useEffect, useRef, useState, useMemo } from 'react';
+import { playMusicBoxChime, unlockAudio } from '../utils/sound';
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 const DEFAULT_MIN_DURATION = 2800;
@@ -69,32 +70,7 @@ const BURST_PARTICLES = Array.from({ length: 14 }, (_, i) => {
   };
 });
 
-// ─── Web Audio Music-Box Chime (C5, E5, G5, C6) ────────────────────────────────
-function playMusicBoxChime() {
-  try {
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) return;
-    const ctx = new AudioCtx();
-    const notes = [523.25, 659.25, 783.99, 1046.50];
-    notes.forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.value = freq;
-      const startTime = ctx.currentTime + i * 0.12;
-      gain.gain.setValueAtTime(0, startTime);
-      gain.gain.linearRampToValueAtTime(0.18, startTime + 0.03);
-      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.75);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(startTime);
-      osc.stop(startTime + 0.8);
-    });
-    setTimeout(() => {
-      try { ctx.close(); } catch {}
-    }, 2200);
-  } catch {}
-}
+
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
@@ -269,9 +245,7 @@ export default function Preloader({
 
     if (!chimedRef.current) {
       chimedRef.current = true;
-      if (!isMuted) {
-        playMusicBoxChime();
-      }
+      playMusicBoxChime(isMuted);
     }
 
     // Hold climax for 650ms to let user see Pip wave and sparkle burst
@@ -379,6 +353,8 @@ export default function Preloader({
         aria-live="polite"
         aria-busy={phase !== 'exit'}
         aria-label="Loading Pip's Dream Nursery"
+        onClick={unlockAudio}
+        onPointerDown={unlockAudio}
         style={{
           position: 'fixed',
           inset: 0,
@@ -708,10 +684,28 @@ export default function Preloader({
             </span>
           </div>
 
-          {/* 5. Footer Microcopy */}
+          {/* 5. Audio hint & Footer Microcopy */}
+          <button
+            type="button"
+            onClick={unlockAudio}
+            style={{
+              background: 'none',
+              border: 'none',
+              margin: '2px 0 0 0',
+              padding: '2px 8px',
+              fontFamily: 'var(--font-body, "Fredoka", sans-serif)',
+              fontSize: '0.68rem',
+              color: '#a34063',
+              opacity: 0.82,
+              cursor: 'pointer',
+            }}
+          >
+            🎵 Click anywhere to wake Pip with sound
+          </button>
+
           <p
             style={{
-              margin: '8px 0 0 0',
+              margin: '4px 0 0 0',
               fontFamily: 'var(--font-body, "Fredoka", sans-serif)',
               fontSize: '0.72rem',
               fontWeight: 600,
