@@ -24,7 +24,7 @@
  */
 
 import { useEffect, useRef, useState, useMemo } from 'react';
-import { playMusicBoxChime, unlockAudio, playClickChime } from '../utils/sound';
+import { playMusicBoxChime, unlockAudio } from '../utils/sound';
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 const DEFAULT_MIN_DURATION = 2800;
@@ -172,7 +172,6 @@ export default function Preloader({
   const [phraseIdx, setPhraseIdx] = useState(0);
   const [sparkleCount, setSparkleCount] = useState(0);
   const [phase, setPhase] = useState('loading'); // 'loading' | 'complete' | 'exit'
-  const [chimePlayed, setChimePlayed] = useState(false);
 
   const startTimeRef = useRef(Date.now());
   const rafRef = useRef(null);
@@ -240,46 +239,21 @@ export default function Preloader({
     };
   }, [phase]);
 
-  const exitTimerRef = useRef(null);
-
-  const handleInteraction = () => {
-    unlockAudio();
-    if (phase === 'complete' && !chimePlayed) {
-      setChimePlayed(true);
-      playMusicBoxChime(isMuted);
-      if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
-      exitTimerRef.current = setTimeout(() => setPhase('exit'), 700);
-    }
-  };
-
   // Climax when 100% is reached: auto-play music-box chime, wave Pip, then auto-exit!
   useEffect(() => {
     if (phase !== 'complete') return;
 
     if (!chimedRef.current) {
       chimedRef.current = true;
-      playMusicBoxChime(isMuted).then((played) => {
-        if (played) {
-          setChimePlayed(true);
-          // Auto-advance after 800ms so user sees Pip wave & sparkles, then blanket pulls up
-          if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
-          exitTimerRef.current = setTimeout(() => {
-            setPhase('exit');
-          }, 800);
-        } else {
-          // Autoplay blocked by browser policy without prior interaction:
-          // Keep display inviting tap to play sound, with 3.2s safety fallback
-          if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
-          exitTimerRef.current = setTimeout(() => {
-            setPhase('exit');
-          }, 3200);
-        }
-      });
+      playMusicBoxChime(isMuted);
     }
 
-    return () => {
-      if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
-    };
+    // Auto-advance after 750ms so user sees Pip wave & sparkles, then blanket pulls up
+    const t = setTimeout(() => {
+      setPhase('exit');
+    }, 750);
+
+    return () => clearTimeout(t);
   }, [phase, isMuted]);
 
   // Exit transition finishes → notify parent
@@ -379,8 +353,8 @@ export default function Preloader({
         aria-live="polite"
         aria-busy={phase !== 'exit'}
         aria-label="Loading Pip's Dream Nursery"
-        onClick={handleInteraction}
-        onPointerDown={handleInteraction}
+        onClick={unlockAudio}
+        onPointerDown={unlockAudio}
         style={{
           position: 'fixed',
           inset: 0,
@@ -391,7 +365,6 @@ export default function Preloader({
           justifyContent: 'center',
           backgroundColor: '#fffaf3',
           overflow: 'hidden',
-          cursor: phase === 'exit' ? 'default' : 'pointer',
           // Storybook horizontal paper texture + soft warm amber radial center glow
           backgroundImage: `
             radial-gradient(circle 380px at 50% 42%, rgba(255, 183, 3, 0.14) 0%, transparent 70%),
@@ -481,16 +454,8 @@ export default function Preloader({
 
           {/* Pip Floating on Sleepy Cloud */}
           <div
-            id="pip-cloud-avatar"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleInteraction();
-              playClickChime(isMuted);
-            }}
-            title="Tap Pip to wake him ✨"
             style={{
               position: 'relative',
-              cursor: 'pointer',
               animation:
                 phase === 'complete'
                   ? 'pipWaveWiggle 0.65s ease-in-out'
@@ -511,7 +476,7 @@ export default function Preloader({
                 display: 'block',
                 filter: 'drop-shadow(0 10px 22px rgba(92, 64, 51, 0.12))',
                 userSelect: 'none',
-                pointerEvents: 'auto',
+                pointerEvents: 'none',
               }}
               loading="eager"
             />
@@ -583,7 +548,7 @@ export default function Preloader({
             aria-live="polite"
             aria-atomic="true"
             style={{
-              minHeight: '2.8em',
+              height: '2.6em',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -592,35 +557,20 @@ export default function Preloader({
             }}
           >
             {phase === 'complete' ? (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                <h2
-                  style={{
-                    margin: 0,
-                    fontFamily: 'var(--font-head, "Fraunces", Georgia, serif)',
-                    fontWeight: 900,
-                    fontSize: 'clamp(1.15rem, 3.8vw, 1.55rem)',
-                    color: '#5c4033',
-                    letterSpacing: '-0.02em',
-                    transform: 'scale(1.04)',
-                    transition: 'transform 0.3s ease',
-                  }}
-                >
-                  Wake up, <span style={{ color: '#a34063' }}>dreamer</span>! ✨
-                </h2>
-                {!chimePlayed && (
-                  <span
-                    style={{
-                      fontFamily: 'var(--font-body, "Fredoka", sans-serif)',
-                      fontSize: '0.78rem',
-                      fontWeight: 600,
-                      color: '#a34063',
-                      letterSpacing: '0.01em',
-                    }}
-                  >
-                    🎵 Tap anywhere to wake Pip with sound
-                  </span>
-                )}
-              </div>
+              <h2
+                style={{
+                  margin: 0,
+                  fontFamily: 'var(--font-head, "Fraunces", Georgia, serif)',
+                  fontWeight: 900,
+                  fontSize: 'clamp(1.2rem, 4vw, 1.6rem)',
+                  color: '#5c4033',
+                  letterSpacing: '-0.02em',
+                  transform: 'scale(1.05)',
+                  transition: 'transform 0.3s ease',
+                }}
+              >
+                Wake up, <span style={{ color: '#a34063' }}>dreamer</span>! ✨
+              </h2>
             ) : (
               <h2
                 key={phraseIdx}
@@ -747,9 +697,7 @@ export default function Preloader({
               textAlign: 'center',
             }}
           >
-            {phase === 'complete' && !chimePlayed
-              ? '✨ Tap anywhere to enter with music 🗝️'
-              : "Midnight Nursery is opening… shhh, don't wake the ghosts 👻"}
+            Midnight Nursery is opening… shhh, don't wake the ghosts 👻
           </p>
         </div>
       </div>
