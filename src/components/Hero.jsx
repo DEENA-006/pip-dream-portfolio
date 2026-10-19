@@ -1,3 +1,4 @@
+import { useRef, useState } from 'react';
 import { playSingleNote, playBoopSound } from '../utils/sound';
 
 const GREETINGS = [
