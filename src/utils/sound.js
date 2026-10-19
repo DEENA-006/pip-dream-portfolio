@@ -1,20 +1,21 @@
+// Web Audio synth for Pip.baby
+// Lightweight, zero-asset music box synthesizer.
+
 let _ctx = null;
 let _masterGain = null;
 
-// lazy init on first user click so chrome autoplay policy doesn't complain
+// lazy init on user action
 function getCtx() {
   if (typeof window === 'undefined') return null;
   try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return null;
+
     if (!_ctx) {
-      const C = window.AudioContext || window.webkitAudioContext;
-      if (!C) return null;
-      _ctx = new C();
+      _ctx = new AudioCtx();
       _masterGain = _ctx.createGain();
       _masterGain.gain.setValueAtTime(1, _ctx.currentTime);
       _masterGain.connect(_ctx.destination);
-    }
-    if (_ctx.state === 'suspended') {
-      _ctx.resume().catch(() => {});
     }
   } catch {
     return null;
@@ -22,7 +23,27 @@ function getCtx() {
   return _ctx;
 }
 
-// 40ms linear ramp to prevent speaker pop when muting active audio
+// run callback safely after making sure context is running
+function withCtx(callback) {
+  const ctx = getCtx();
+  if (!ctx) return;
+
+  if (ctx.state === 'suspended') {
+    ctx.resume()
+      .then(() => {
+        try {
+          callback(ctx);
+        } catch {}
+      })
+      .catch(() => {});
+  } else {
+    try {
+      callback(ctx);
+    } catch {}
+  }
+}
+
+// smooth master mute ramp (avoids clicks/pops)
 export function setMasterMute(isMuted) {
   if (!_ctx || !_masterGain) return;
   const now = _ctx.currentTime;
@@ -34,25 +55,57 @@ export function setMasterMute(isMuted) {
 // core tone synth with smooth adsr envelope
 function tone({ freq = 440, type = 'sine', dur = 0.15, vol = 0.1, start = 0, isMuted = false }) {
   if (isMuted) return;
-  const ctx = getCtx();
-  if (!ctx || ctx.state === 'suspended') return;
 
-  const now = ctx.currentTime + start;
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
+  withCtx((ctx) => {
+    const now = ctx.currentTime + start;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
 
-  osc.type = type;
-  osc.frequency.setValueAtTime(freq, now);
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, now);
 
-  gain.gain.setValueAtTime(0.0001, now);
-  gain.gain.exponentialRampToValueAtTime(vol, now + 0.012);
-  gain.gain.setValueAtTime(vol, now + dur * 0.65);
-  gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(vol, now + 0.012);
+    gain.gain.setValueAtTime(vol, now + dur * 0.65);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
 
-  osc.connect(gain);
-  gain.connect(_masterGain);
-  osc.start(now);
-  osc.stop(now + dur + 0.01);
+    osc.connect(gain);
+    gain.connect(_masterGain);
+    osc.start(now);
+    osc.stop(now + dur + 0.015);
+  });
+}
+
+// cute playful boop sound for amber eye-tracker / skull clicks
+export function playBoopSound(boopCount = 0, isMuted = false) {
+  if (isMuted) return;
+
+  withCtx((ctx) => {
+    // rising pitch ladder per boop
+    const pitches = [
+      { start: 523.25, end: 659.25 }, // boop 1 (C5 -> E5)
+      { start: 659.25, end: 783.99 }, // boop 2 (E5 -> G5)
+      { start: 783.99, end: 1046.50 }, // boop 3 (G5 -> C6)
+    ];
+    const pitch = pitches[boopCount % pitches.length] || pitches[0];
+    const now = ctx.currentTime;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(pitch.start, now);
+    osc.frequency.exponentialRampToValueAtTime(pitch.end, now + 0.08);
+
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.exponentialRampToValueAtTime(0.12, now + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.14);
+
+    osc.connect(gain);
+    gain.connect(_masterGain);
+    osc.start(now);
+    osc.stop(now + 0.15);
+  });
 }
 
 export function playClickChime(isMuted = false) {
@@ -101,23 +154,23 @@ export function playToggle(isDark = false, isMuted = false) {
 
 export function playChaos(isChaos = false, isMuted = false) {
   if (isMuted) return;
-  const ctx = getCtx();
-  if (!ctx || ctx.state === 'suspended') return;
 
-  const now = ctx.currentTime;
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
+  withCtx((ctx) => {
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
 
-  osc.type = isChaos ? 'sawtooth' : 'triangle';
-  osc.frequency.setValueAtTime(isChaos ? 350 : 800, now);
-  osc.frequency.exponentialRampToValueAtTime(isChaos ? 1100 : 400, now + 0.2);
+    osc.type = isChaos ? 'sawtooth' : 'triangle';
+    osc.frequency.setValueAtTime(isChaos ? 350 : 800, now);
+    osc.frequency.exponentialRampToValueAtTime(isChaos ? 1100 : 400, now + 0.2);
 
-  gain.gain.setValueAtTime(0.001, now);
-  gain.gain.exponentialRampToValueAtTime(0.08, now + 0.02);
-  gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.exponentialRampToValueAtTime(0.08, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
 
-  osc.connect(gain);
-  gain.connect(_masterGain);
-  osc.start(now);
-  osc.stop(now + 0.25);
+    osc.connect(gain);
+    gain.connect(_masterGain);
+    osc.start(now);
+    osc.stop(now + 0.25);
+  });
 }

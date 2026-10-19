@@ -1,5 +1,4 @@
-import { useRef, useState } from 'react';
-import { playSingleNote } from '../utils/sound';
+import { playSingleNote, playBoopSound } from '../utils/sound';
 
 const GREETINGS = [
   'Zzz... almost slept through this!',
@@ -17,7 +16,7 @@ export default function Hero({ isMuted, _isDark, dreamsDelivered, boopCount, sec
   const [isTilting, setIsTilting] = useState(false);
   const greetIdx = useRef(0);
 
-  // cycle through quotes on click
+  // cycle through quotes and play boop sound on every click
   const boop = () => {
     greetIdx.current = (greetIdx.current + 1) % GREETINGS.length;
     setGreeting(GREETINGS[greetIdx.current]);
@@ -25,6 +24,7 @@ export default function Hero({ isMuted, _isDark, dreamsDelivered, boopCount, sec
     setIsTilting(true);
     setTimeout(() => setIsTilting(false), 600);
     setTimeout(() => setShowSpeech(false), 2400);
+    playBoopSound(boopCount, isMuted);
     onBoop();
   };
 
@@ -144,14 +144,19 @@ export default function Hero({ isMuted, _isDark, dreamsDelivered, boopCount, sec
               </button>
             </div>
 
-            <div>
+            <button
+              type="button"
+              onClick={boop}
+              className="text-left cursor-pointer bg-transparent border-0 p-0 transition-opacity hover:opacity-80 active:scale-95"
+              aria-label="Amber Eye-Tracker — Click to boop Pip's skull & eyes"
+            >
               <p className="font-bold text-sm sm:text-base text-[#5c4033] dark:text-[#fff8f1]">Amber Eye-Tracker</p>
               <p className="text-xs leading-snug mt-0.5 text-[#5c4033] dark:text-[#fff8f1] font-medium">
                 {boopCount === 0
                   ? 'Eyes follow your cursor! Boop bow 3× 🎀'
                   : `Hehe! That tickles! ${boopCount}/3 boops…`}
               </p>
-            </div>
+            </button>
           </div>
 
           <div

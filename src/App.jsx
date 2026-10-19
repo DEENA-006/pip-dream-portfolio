@@ -139,36 +139,29 @@ The secret is in the pink bow. (Try booping it 3 times...)
     setEgg((prev) => {
       const nextBoops = prev.boops + 1;
       if (nextBoops >= 3) {
+        addDreams(5);
+        playVictoryArpeggio(toggles.muted);
+        try {
+          confetti({
+            particleCount: 100,
+            spread: 85,
+            origin: { y: 0.5 },
+            colors: ['#a34063', '#ffb703', '#fff8f1', '#5c4033', '#c084fc'],
+            disableForReducedMotion: true,
+          });
+        } catch {}
+
+        if (modalTimerRef.current) clearTimeout(modalTimerRef.current);
+        modalTimerRef.current = setTimeout(() => {
+          setEgg((curr) => ({ ...curr, open: false }));
+          modalTimerRef.current = null;
+        }, 4500);
+
         return { boops: 0, unlocked: true, open: true };
       }
       return { ...prev, boops: nextBoops };
     });
-  }, []);
-
-  // trigger side effects once when secret unlocked flips to true
-  const prevUnlockedRef = useRef(false);
-  useEffect(() => {
-    if (egg.unlocked && !prevUnlockedRef.current) {
-      prevUnlockedRef.current = true;
-      addDreams(5);
-      playVictoryArpeggio(toggles.muted);
-      try {
-        confetti({
-          particleCount: 100,
-          spread: 85,
-          origin: { y: 0.5 },
-          colors: ['#a34063', '#ffb703', '#fff8f1', '#5c4033', '#c084fc'],
-          disableForReducedMotion: true,
-        });
-      } catch {}
-
-      if (modalTimerRef.current) clearTimeout(modalTimerRef.current);
-      modalTimerRef.current = setTimeout(() => {
-        setEgg((curr) => ({ ...curr, open: false }));
-        modalTimerRef.current = null;
-      }, 4500);
-    }
-  }, [egg.unlocked, toggles.muted, addDreams]);
+  }, [addDreams, toggles.muted]);
 
   return (
     <>
