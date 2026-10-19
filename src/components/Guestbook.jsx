@@ -63,6 +63,7 @@ export default function Guestbook({ isMuted, onDreamsEarned }) {
   const cooldownRef = useRef(false);
   const toastTimerRef = useRef(null);
   const successTimerRef = useRef(null);
+  const heartIdRef = useRef(0);
 
   useEffect(() => {
     return () => {
@@ -149,7 +150,8 @@ export default function Guestbook({ isMuted, onDreamsEarned }) {
     e.stopPropagation();
     playSingleNote(880, isMuted, 'triangle');
 
-    const floatId = Date.now() + Math.random();
+    heartIdRef.current += 1;
+    const floatId = heartIdRef.current;
     const rect = e.currentTarget.getBoundingClientRect();
     const clientX = e.clientX || rect.left + rect.width / 2;
     const clientY = e.clientY || rect.top;

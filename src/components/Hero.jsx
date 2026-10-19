@@ -11,7 +11,7 @@ const GREETINGS = [
   '17:17 — dream delivery time!',
 ];
 
-export default function Hero({ isMuted, isDark, dreamsDelivered, boopCount, secretUnlocked, onBoop, onWave, pupilOffset, skullRef }) {
+export default function Hero({ isMuted, _isDark, dreamsDelivered, boopCount, secretUnlocked, onBoop, onWave, pupilOffset, skullRef }) {
   const [greeting, setGreeting] = useState(GREETINGS[0]);
   const [showSpeech, setShowSpeech] = useState(false);
   const [isTilting, setIsTilting] = useState(false);

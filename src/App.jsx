@@ -5,8 +5,10 @@ import Hero from './components/Hero.jsx';
 import Projects from './components/Projects.jsx';
 import StoryScroll from './components/StoryScroll.jsx';
 import Guestbook from './components/Guestbook.jsx';
+import Footer from './components/Footer.jsx';
 import AchievementModal from './components/AchievementModal.jsx';
 import SparkleTrail from './components/SparkleTrail.jsx';
+import Preloader from './components/Preloader.jsx';
 import { playVictoryArpeggio } from './utils/sound.js';
 
 const CHAOS_STICKERS = [
@@ -17,6 +19,7 @@ const CHAOS_STICKERS = [
 ];
 
 export default function App() {
+  const [isLoading, setIsLoading] = useState(true);
   const [toggles, setToggles] = useState({ muted: false, dark: false, chaos: false });
   const [cursor, setCursor] = useState({ x: -999, y: -999, pupil: { x: 0, y: 0 } });
   const [egg, setEgg] = useState({ boops: 0, unlocked: false, open: false });
@@ -50,6 +53,18 @@ The secret is in the pink bow. (Try booping it 3 times...)
       'color: #8b6355; font-size: 11px; font-family: sans-serif; font-style: italic;'
     );
   }, []);
+
+  // lock body scrolling while preloader is active
+  useEffect(() => {
+    if (isLoading) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isLoading]);
 
   // sync theme class to root for tailwind v4
   useEffect(() => {
@@ -156,10 +171,20 @@ The secret is in the pink bow. (Try booping it 3 times...)
   }, [egg.unlocked, toggles.muted, addDreams]);
 
   return (
-    <div
-      data-testid="app-container"
-      className={`min-h-screen relative font-fredoka bg-[#fffaf3] dark:bg-[#161124] text-[#5c4033] dark:text-[#fff8f1] transition-colors duration-300 ${toggles.chaos ? 'chaos-active' : ''}`}
-    >
+    <>
+      {isLoading && (
+        <Preloader
+          onComplete={() => setIsLoading(false)}
+          showOncePerSession={false}
+          isMuted={toggles.muted}
+        />
+      )}
+
+      <div
+        data-testid="app-container"
+        className={`min-h-screen relative font-fredoka bg-[#fffaf3] dark:bg-[#161124] text-[#5c4033] dark:text-[#fff8f1] transition-colors duration-300 ${toggles.chaos ? 'chaos-active' : ''}`}
+        aria-hidden={isLoading}
+      >
       {toggles.dark && (
         <div
           data-testid="midnight-torch-mask"
@@ -229,26 +254,13 @@ The secret is in the pink bow. (Try booping it 3 times...)
         />
       </main>
 
-      <footer className="relative z-10 border-t-2 border-[#5c4033]/30 dark:border-[#ffb703]/30 mt-20 py-10 px-4 text-center space-y-3" role="contentinfo">
-        <p className="font-fraunces font-extrabold text-lg sm:text-xl text-[#5c4033] dark:text-[#fff8f1]">
-          Pip · Junior Dream Engineer at Midnight Nursery
-        </p>
-        <p className="text-sm text-[#5c4033] dark:text-[#fff8f1] max-w-3xl mx-auto leading-relaxed font-medium">
-          Built for the <strong className="text-[#a34063] dark:text-[#ffb703]">haX.baby "Baby's First Website"</strong> 48-hour hackathon (Oct 17–19, 2026).
-          Track 1 Canon character &amp; studio illustrations courtesy of the official <strong className="text-[#5c4033] dark:text-[#fff8f1]">haX.baby Creator Asset Pack</strong>.
-          All sound effects synthesized live via the native <strong className="text-[#5c4033] dark:text-[#fff8f1]">Browser Web Audio API</strong> — zero external MP3 files.
-          Confetti via <code>canvas-confetti</code>. Typography via Google Fonts (Fraunces &amp; Fredoka).
-          React 19 · Vite 8 · Tailwind CSS v4.
-        </p>
-        <p className="text-xs uppercase tracking-widest font-extrabold text-[#5c4033] dark:text-[#fff8f1]">
-          ★ Zero Console Errors · All Images Alt-Tagged · All Lists Keyed · Mobile 360px+ ★
-        </p>
-      </footer>
+      <Footer />
 
       <AchievementModal
         show={egg.open}
         onClose={closeModal}
       />
     </div>
+    </>
   );
 }

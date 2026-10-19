@@ -181,4 +181,85 @@ test.describe('Pip Midnight Nursery — End-to-End Suite', () => {
     await expect(nameInput).toHaveValue('');
     await expect(wishInput).toHaveValue('');
   });
+
+  test('5. Hackathon Refinements: Mobile Navbar Ergonomics (44px touch targets), Footer Badge, and Storybook Polish', async ({ page }) => {
+    // A. Verify Hackathon Footer Badge & Public GitHub Link
+    const badge = page.getByTestId('github-hackathon-badge');
+    await badge.scrollIntoViewIfNeeded();
+    await expect(badge).toBeVisible();
+    await expect(badge).toContainText('★ Built for haX.baby Sprint (Oct 17–19, 2026) · Public Commit History Verified');
+    await expect(badge).toHaveAttribute('href', 'https://github.com/DEENA-006/pip-dream-portfolio');
+    await expect(badge).toHaveAttribute('target', '_blank');
+
+    // B. Verify Storybook Scenes Length (< 120 words) and Drop-Caps
+    const storySection = page.locator('#story');
+    await expect(storySection).toBeVisible();
+    const storyParagraphs = storySection.locator('p.drop-cap');
+    const count = await storyParagraphs.count();
+    expect(count).toBe(3);
+
+    for (let i = 0; i < count; i++) {
+      const text = await storyParagraphs.nth(i).innerText();
+      const words = text.trim().split(/\s+/).filter(Boolean).length;
+      expect(words).toBeLessThan(120);
+    }
+
+    // C. Mobile Touch Ergonomics on <480px screen (e.g., 360x640)
+    await page.setViewportSize({ width: 360, height: 640 });
+    await page.evaluate(() => window.scrollTo(0, 0));
+
+    const topbar = page.getByTestId('topbar');
+    await expect(topbar).toBeVisible();
+
+    // Verify touch targets are at least 44px
+    const muteBtn = page.getByTestId('mute-toggle');
+    const darkBtn = page.getByTestId('dark-toggle');
+    const chaosBtn = page.getByTestId('chaos-toggle');
+    const dispatchBtn = page.getByTestId('dispatch-dream-btn');
+
+    for (const btn of [muteBtn, darkBtn, chaosBtn, dispatchBtn]) {
+      const box = await btn.boundingBox();
+      expect(box).not.toBeNull();
+      expect(box.width).toBeGreaterThanOrEqual(44);
+      expect(box.height).toBeGreaterThanOrEqual(44);
+    }
+
+    // Verify zero horizontal overflow on mobile
+    const hasHorizontalOverflow = await page.evaluate(() => {
+      return document.documentElement.scrollWidth > window.innerWidth;
+    });
+    expect(hasHorizontalOverflow).toBe(false);
+  });
+
+  test('6. Gateway Preloader: 90s Midnight Nursery OS Boot Sequence, Progress Bar, and Clean Unmount', async ({ page }) => {
+    // Reload page to observe initial preloader state
+    await page.goto('/');
+
+    // Check preloader presence
+    const preloader = page.getByTestId('midnight-preloader');
+    await expect(preloader).toBeVisible();
+    await expect(preloader).toContainText('MIDNIGHT_NURSERY_OS');
+
+    // Verify boot message element and progress bar exist
+    const bootMsg = page.getByTestId('preloader-boot-message');
+    await expect(bootMsg).toBeVisible();
+    const progressBar = page.getByTestId('preloader-progress-bar');
+    await expect(progressBar).toBeVisible();
+
+    // Verify Skip button works immediately and cleans up preloader
+    const skipBtn = page.getByTestId('skip-boot-btn');
+    await expect(skipBtn).toBeVisible();
+    await skipBtn.click();
+
+    // Verify preloader exits and unmounts cleanly
+    await expect(preloader).not.toBeVisible({ timeout: 2000 });
+
+    // Verify body overflow is unlocked (not 'hidden')
+    const bodyOverflow = await page.evaluate(() => document.body.style.overflow);
+    expect(bodyOverflow).not.toBe('hidden');
+
+    // Verify main app content is now fully visible and active
+    const topbar = page.getByTestId('topbar');
+    await expect(topbar).toBeVisible();
+  });
 });

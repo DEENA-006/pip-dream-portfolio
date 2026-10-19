@@ -6,7 +6,7 @@ const SCENES = [
     id: 1,
     icon: '🌠',
     tag: 'Chapter 01 · The First Giggle',
-    wordCount: '68 Words',
+    wordCount: '61 Words',
     title: 'Born from a Stray Wishing Star',
     text: 'One crisp October evening, a sleepy wishing star tumbled down the chimney of the Midnight Nursery and landed inside a basket of warm quilt scraps. Out popped Pip — a tiny skull baby with glowing amber eye-pinpricks and a crooked little smile. Because Pip hated awkward silence, their very first giggle turned every scary shadow in the room into cozy velvet!',
     reaction: '✨ Wishing Star Twinkled! +1 Starlight Memory',
@@ -17,7 +17,7 @@ const SCENES = [
     id: 2,
     icon: '🔑',
     tag: 'Chapter 02 · The Silence Problem',
-    wordCount: '71 Words',
+    wordCount: '60 Words',
     title: 'Tinkering with Brass Keys & Porcelain',
     text: 'Whenever the night wind howled outside, the neighborhood baby ghosts and cloud bunnies couldn\'t fall asleep. Determined to fix the noise, Pip crawled into the nursery workshop with three wooden rattle blocks, a brass winding key, and a crescent porcelain lamp. Before even learning to walk, Pip tuned the first Lullaby Box to the exact frequency of a contented yawn.',
     reaction: '🎵 Brass Key Wound! Soothing harmonic calibrated!',
@@ -28,7 +28,7 @@ const SCENES = [
     id: 3,
     icon: '☁️',
     tag: 'Chapter 03 · Nightly Rooftop Flights',
-    wordCount: '66 Words',
+    wordCount: '50 Words',
     title: 'Junior Dream Engineer on Patrol',
     text: 'Now, every evening when the nursery clock strikes 17:17, Pip straightens the pink bow on their starry nightcap and hops onto a fluffy cumulus cloud. Gliding from chimney to chimney with a warm lantern in hand, Pip delivers custom-built dreams so every creature on the internet wakes up brighter tomorrow.',
     reaction: '☁️ Cloud Glider Whooshed! Sweet dreams dispatched!',
@@ -138,7 +138,7 @@ export default function StoryScroll({ isMuted }) {
                 {scene.title}
               </h3>
 
-              <p className="drop-cap text-base sm:text-lg leading-relaxed text-[#5c4033] dark:text-[#fff8f1] font-medium overflow-hidden">
+              <p className="drop-cap text-base sm:text-lg leading-relaxed text-[#5c4033] dark:text-[#fff8f1] font-medium">
                 {scene.text}
               </p>
             </div>

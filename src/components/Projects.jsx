@@ -17,7 +17,7 @@ const LANTERN_COLORS = [
   { name: 'Lavender Mist', hex: '#c084fc', bg: 'rgba(192,132,252,0.22)' },
 ];
 
-export default function Projects({ isMuted, isDark, onDreamsEarned }) {
+export default function Projects({ isMuted, _isDark, onDreamsEarned }) {
   // pragmatic state grouping per toy
   const [box, setBox] = useState({ key: null, playing: false, spinning: false, notes: [] });
   const [lantern, setLantern] = useState({ color: LANTERN_COLORS[0], brightness: 85 });
