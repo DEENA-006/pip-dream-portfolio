@@ -4,6 +4,7 @@
 let _ctx = null;
 let _masterGain = null;
 let _cachedChimeUri = null;
+let _pendingWelcomeChime = false;
 
 // generate a clean 16-bit mono PCM WAV data URI
 function generateWav(sampleRate, duration, sampleFn) {
@@ -44,7 +45,7 @@ function generateWav(sampleRate, duration, sampleFn) {
 }
 
 // get or lazily synthesize the 4-note music-box chime WAV (C5 -> E5 -> G5 -> C6)
-function getChimeWav() {
+export function getChimeWav() {
   if (_cachedChimeUri) return _cachedChimeUri;
   _cachedChimeUri = generateWav(16000, 1.4, (t) => {
     const notes = [
@@ -84,11 +85,15 @@ export function getCtx() {
   return _ctx;
 }
 
-// unlock audio context on any user interaction
+// unlock audio context on any user interaction and fulfill pending chimes
 export function unlockAudio() {
   const ctx = getCtx();
   if (ctx && ctx.state === 'suspended') {
-    return ctx.resume().catch(() => {});
+    ctx.resume().catch(() => {});
+  }
+  if (_pendingWelcomeChime) {
+    _pendingWelcomeChime = false;
+    playMusicBoxChime(false);
   }
   return Promise.resolve();
 }
@@ -172,47 +177,66 @@ export function playBoopSound(boopCount = 0, isMuted = false) {
 
 // music box chime for preloader exit (C5 -> E5 -> G5 -> C6)
 // plays automatically via HTML5 audio element + Web Audio synth
-export function playMusicBoxChime(isMuted = false) {
-  if (isMuted) return;
+export async function playMusicBoxChime(isMuted = false) {
+  if (isMuted) return false;
 
-  // 1. HTML5 Audio (bypasses Web Audio autoplay lock on reload)
-  try {
-    const uri = getChimeWav();
-    if (uri) {
-      const audio = new Audio(uri);
-      audio.volume = 0.65;
-      audio.play().catch(() => {});
+  // 1. Try HTML5 Audio (both static asset and in-memory WAV data URI fallback)
+  const soundSources = ['/assets/music_box_chime.wav'];
+  const fallbackUri = getChimeWav();
+  if (fallbackUri) soundSources.push(fallbackUri);
+
+  for (const src of soundSources) {
+    try {
+      const audio = new Audio(src);
+      audio.volume = 0.75;
+      await audio.play();
+      _pendingWelcomeChime = false;
+      return true;
+    } catch {
+      // Browser blocked autoplay or fetch failed, continue to next fallback
     }
-  } catch {}
+  }
 
   // 2. Web Audio synthesis companion
   const ctx = getCtx();
-  if (!ctx) return;
+  if (ctx) {
+    if (ctx.state === 'suspended') {
+      try {
+        await ctx.resume();
+      } catch {
+        _pendingWelcomeChime = true;
+        return false;
+      }
+    }
 
-  if (ctx.state === 'suspended') {
-    ctx.resume().catch(() => {});
+    if (ctx.state === 'running') {
+      try {
+        const notes = [523.25, 659.25, 783.99, 1046.50];
+        notes.forEach((freq, i) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          const startTime = ctx.currentTime + i * 0.13;
+
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, startTime);
+
+          gain.gain.setValueAtTime(0.001, startTime);
+          gain.gain.linearRampToValueAtTime(0.35, startTime + 0.03);
+          gain.gain.linearRampToValueAtTime(0.0001, startTime + 0.85);
+
+          osc.connect(gain);
+          gain.connect(_masterGain || ctx.destination);
+          osc.start(startTime);
+          osc.stop(startTime + 0.9);
+        });
+        _pendingWelcomeChime = false;
+        return true;
+      } catch {}
+    }
   }
 
-  try {
-    const notes = [523.25, 659.25, 783.99, 1046.50];
-    notes.forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      const startTime = ctx.currentTime + i * 0.12;
-
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, startTime);
-
-      gain.gain.setValueAtTime(0.001, startTime);
-      gain.gain.linearRampToValueAtTime(0.32, startTime + 0.03);
-      gain.gain.linearRampToValueAtTime(0.0001, startTime + 0.85);
-
-      osc.connect(gain);
-      gain.connect(_masterGain || ctx.destination);
-      osc.start(startTime);
-      osc.stop(startTime + 0.9);
-    });
-  } catch {}
+  _pendingWelcomeChime = true;
+  return false;
 }
 
 export function playClickChime(isMuted = false) {
