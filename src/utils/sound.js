@@ -11,14 +11,11 @@ export function getCtx() {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     if (!AudioCtx) return null;
 
-    if (!_ctx) {
+    if (!_ctx || _ctx.state === 'closed') {
       _ctx = new AudioCtx();
       _masterGain = _ctx.createGain();
       _masterGain.gain.setValueAtTime(1, _ctx.currentTime);
       _masterGain.connect(_ctx.destination);
-    }
-    if (_ctx.state === 'suspended') {
-      _ctx.resume().catch(() => {});
     }
   } catch {
     return null;
@@ -45,37 +42,33 @@ export function setMasterMute(isMuted) {
 }
 
 // core tone synth with linear ramps (never throws DOMExceptions)
-function tone({ freq = 440, type = 'sine', dur = 0.18, vol = 0.22, start = 0, isMuted = false }) {
+function tone({ freq = 440, type = 'sine', dur = 0.18, vol = 0.28, start = 0, isMuted = false }) {
   if (isMuted) return;
   const ctx = getCtx();
   if (!ctx) return;
 
-  const play = () => {
-    try {
-      const now = ctx.currentTime + Math.max(0, start);
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-
-      osc.type = type;
-      osc.frequency.setValueAtTime(freq, now);
-
-      gain.gain.setValueAtTime(0.001, now);
-      gain.gain.linearRampToValueAtTime(vol, now + 0.02);
-      gain.gain.setValueAtTime(vol, now + dur * 0.6);
-      gain.gain.linearRampToValueAtTime(0.0001, now + dur);
-
-      osc.connect(gain);
-      gain.connect(_masterGain);
-      osc.start(now);
-      osc.stop(now + dur + 0.05);
-    } catch {}
-  };
-
   if (ctx.state === 'suspended') {
-    ctx.resume().then(play).catch(() => {});
-  } else {
-    play();
+    ctx.resume().catch(() => {});
   }
+
+  try {
+    const now = ctx.currentTime + Math.max(0, start);
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, now);
+
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(vol, now + 0.02);
+    gain.gain.setValueAtTime(vol, now + dur * 0.6);
+    gain.gain.linearRampToValueAtTime(0.0001, now + dur);
+
+    osc.connect(gain);
+    gain.connect(_masterGain || ctx.destination);
+    osc.start(now);
+    osc.stop(now + dur + 0.05);
+  } catch {}
 }
 
 // playful boop sound for amber eye-tracker / skull clicks
@@ -84,40 +77,36 @@ export function playBoopSound(boopCount = 0, isMuted = false) {
   const ctx = getCtx();
   if (!ctx) return;
 
-  const play = () => {
-    try {
-      const pitches = [
-        { start: 587.33, end: 783.99 },  // boop 1 (D5 -> G5)
-        { start: 783.99, end: 987.77 },  // boop 2 (G5 -> B5)
-        { start: 987.77, end: 1318.51 }, // boop 3 (B5 -> E6)
-      ];
-      const pitch = pitches[boopCount % pitches.length] || pitches[0];
-      const now = ctx.currentTime;
-
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(pitch.start, now);
-      osc.frequency.linearRampToValueAtTime(pitch.end, now + 0.09);
-
-      gain.gain.setValueAtTime(0.001, now);
-      gain.gain.linearRampToValueAtTime(0.28, now + 0.02);
-      gain.gain.setValueAtTime(0.28, now + 0.08);
-      gain.gain.linearRampToValueAtTime(0.0001, now + 0.16);
-
-      osc.connect(gain);
-      gain.connect(_masterGain);
-      osc.start(now);
-      osc.stop(now + 0.18);
-    } catch {}
-  };
-
   if (ctx.state === 'suspended') {
-    ctx.resume().then(play).catch(() => {});
-  } else {
-    play();
+    ctx.resume().catch(() => {});
   }
+
+  try {
+    const pitches = [
+      { start: 587.33, end: 783.99 },  // boop 1 (D5 -> G5)
+      { start: 783.99, end: 987.77 },  // boop 2 (G5 -> B5)
+      { start: 987.77, end: 1318.51 }, // boop 3 (B5 -> E6)
+    ];
+    const pitch = pitches[boopCount % pitches.length] || pitches[0];
+    const now = ctx.currentTime;
+
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(pitch.start, now);
+    osc.frequency.linearRampToValueAtTime(pitch.end, now + 0.09);
+
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.35, now + 0.02);
+    gain.gain.setValueAtTime(0.35, now + 0.08);
+    gain.gain.linearRampToValueAtTime(0.0001, now + 0.16);
+
+    osc.connect(gain);
+    gain.connect(_masterGain || ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.18);
+  } catch {}
 }
 
 // music box chime for preloader exit (C5 -> E5 -> G5 -> C6)
@@ -126,39 +115,35 @@ export function playMusicBoxChime(isMuted = false) {
   const ctx = getCtx();
   if (!ctx) return;
 
-  const play = () => {
-    try {
-      const notes = [523.25, 659.25, 783.99, 1046.50];
-      notes.forEach((freq, i) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        const startTime = ctx.currentTime + i * 0.12;
-
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, startTime);
-
-        gain.gain.setValueAtTime(0.001, startTime);
-        gain.gain.linearRampToValueAtTime(0.25, startTime + 0.03);
-        gain.gain.linearRampToValueAtTime(0.0001, startTime + 0.85);
-
-        osc.connect(gain);
-        gain.connect(_masterGain);
-        osc.start(startTime);
-        osc.stop(startTime + 0.9);
-      });
-    } catch {}
-  };
-
   if (ctx.state === 'suspended') {
-    ctx.resume().then(play).catch(() => {});
-  } else {
-    play();
+    ctx.resume().catch(() => {});
   }
+
+  try {
+    const notes = [523.25, 659.25, 783.99, 1046.50];
+    notes.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const startTime = ctx.currentTime + i * 0.12;
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, startTime);
+
+      gain.gain.setValueAtTime(0.001, startTime);
+      gain.gain.linearRampToValueAtTime(0.32, startTime + 0.03);
+      gain.gain.linearRampToValueAtTime(0.0001, startTime + 0.85);
+
+      osc.connect(gain);
+      gain.connect(_masterGain || ctx.destination);
+      osc.start(startTime);
+      osc.stop(startTime + 0.9);
+    });
+  } catch {}
 }
 
 export function playClickChime(isMuted = false) {
-  tone({ freq: 880, type: 'triangle', dur: 0.08, vol: 0.22, start: 0, isMuted });
-  tone({ freq: 1318.5, type: 'sine', dur: 0.07, vol: 0.12, start: 0.01, isMuted });
+  tone({ freq: 880, type: 'triangle', dur: 0.08, vol: 0.25, start: 0, isMuted });
+  tone({ freq: 1318.5, type: 'sine', dur: 0.07, vol: 0.15, start: 0.01, isMuted });
 }
 
 // c-major pentatonic lullaby sequence
@@ -169,8 +154,8 @@ export function playLullabyMelody(isMuted = false) {
     [1046.50, 1.38], [880.00, 1.70], [783.99, 1.95],
   ];
   melody.forEach(([freq, start]) => {
-    tone({ freq, type: 'sine', dur: 0.38, vol: 0.22, start, isMuted });
-    tone({ freq: freq * 2, type: 'triangle', dur: 0.22, vol: 0.08, start: start + 0.005, isMuted });
+    tone({ freq, type: 'sine', dur: 0.38, vol: 0.25, start, isMuted });
+    tone({ freq: freq * 2, type: 'triangle', dur: 0.22, vol: 0.10, start: start + 0.005, isMuted });
   });
 }
 
@@ -182,22 +167,22 @@ export function playVictoryArpeggio(isMuted = false) {
     [1567.98, 0.54], [2093.00, 0.65],
   ];
   arp.forEach(([freq, start]) =>
-    tone({ freq, type: 'triangle', dur: 0.22, vol: 0.24, start, isMuted })
+    tone({ freq, type: 'triangle', dur: 0.22, vol: 0.28, start, isMuted })
   );
   [1046.50, 1318.51, 1567.98].forEach((f, i) =>
-    tone({ freq: f, type: 'sine', dur: 0.9, vol: 0.18, start: 0.68 + i * 0.02, isMuted })
+    tone({ freq: f, type: 'sine', dur: 0.9, vol: 0.20, start: 0.68 + i * 0.02, isMuted })
   );
 }
 
 export function playSingleNote(freq = 660, isMuted = false, type = 'triangle') {
-  tone({ freq, type, dur: 0.18, vol: 0.22, isMuted });
+  tone({ freq, type, dur: 0.18, vol: 0.25, isMuted });
 }
 
 export function playToggle(isDark = false, isMuted = false) {
   const base = isDark ? 659.25 : 880.00;
   const hi = isDark ? 440.00 : 1174.66;
-  tone({ freq: base, type: 'triangle', dur: 0.10, vol: 0.22, start: 0, isMuted });
-  tone({ freq: hi, type: 'sine', dur: 0.14, vol: 0.22, start: 0.08, isMuted });
+  tone({ freq: base, type: 'triangle', dur: 0.10, vol: 0.25, start: 0, isMuted });
+  tone({ freq: hi, type: 'sine', dur: 0.14, vol: 0.25, start: 0.08, isMuted });
 }
 
 export function playChaos(isChaos = false, isMuted = false) {
@@ -205,30 +190,26 @@ export function playChaos(isChaos = false, isMuted = false) {
   const ctx = getCtx();
   if (!ctx) return;
 
-  const play = () => {
-    try {
-      const now = ctx.currentTime;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-
-      osc.type = isChaos ? 'sawtooth' : 'triangle';
-      osc.frequency.setValueAtTime(isChaos ? 350 : 800, now);
-      osc.frequency.exponentialRampToValueAtTime(isChaos ? 1100 : 400, now + 0.2);
-
-      gain.gain.setValueAtTime(0.001, now);
-      gain.gain.linearRampToValueAtTime(0.18, now + 0.02);
-      gain.gain.linearRampToValueAtTime(0.0001, now + 0.22);
-
-      osc.connect(gain);
-      gain.connect(_masterGain);
-      osc.start(now);
-      osc.stop(now + 0.25);
-    } catch {}
-  };
-
   if (ctx.state === 'suspended') {
-    ctx.resume().then(play).catch(() => {});
-  } else {
-    play();
+    ctx.resume().catch(() => {});
   }
+
+  try {
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = isChaos ? 'sawtooth' : 'triangle';
+    osc.frequency.setValueAtTime(isChaos ? 350 : 800, now);
+    osc.frequency.exponentialRampToValueAtTime(isChaos ? 1100 : 400, now + 0.2);
+
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.25, now + 0.02);
+    gain.gain.linearRampToValueAtTime(0.0001, now + 0.22);
+
+    osc.connect(gain);
+    gain.connect(_masterGain || ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.25);
+  } catch {}
 }
